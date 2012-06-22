@@ -1,86 +1,12 @@
 #!/usr/bin/ruby1.9.1
 #
-# Stash Indexer
+# Stash Indexer - Indexer
 # by dRbiG
 #
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
-%w{ digest find logger pp optparse rubygems filemagic dm-core progressbar }.each{|g| require g}
-
-###
-# Basic database model.
-#
-module STIN
-  class File
-    include DataMapper::Resource
-
-    property :id, Serial
-    property :name, String, :required => true
-    property :path, String, :required => true
-    property :size, Integer, :required => true
-    property :mime, String
-    property :digest, String
-    property :mtime, DateTime
-    property :ctime, DateTime
-    property :additional, String
-
-    has n, :tags, :through => Resource
-  end
-
-  class Tag
-    include DataMapper::Resource
-
-    property :id, Serial
-    property :name, String, :required => true
-    property :ctime, DateTime, :default => Proc.new{|r,p| DateTime.now}
-
-    has n, :files, :through => Resource
-  end
-end
-
-###
-# Handlers dispatcher.
-#
-module STIN
-  @table = Array.new
-  @map = Hash.new
-  @logger = false
-
-  def self.logger=(obj); @logger = obj; end
-
-  def self.add_handler(regexp, dataclass, &blk)
-    @table.push([regexp, blk])
-    @map[dataclass.to_s] = dataclass
-  end
-
-  def self.process(path, entry)
-    additional = Array.new
-    @table.each do |h|
-      regexp, handler = h
-      additional.push(handler.call(path, entry)) if (entry.mime.match(regexp) or entry.name.match(regexp))
-    end
-    additional = additional.compact.uniq
-    if additional.length > 0
-      entry.additional = additional.join(',')
-      entry.save
-    end
-  end
-
-  def self.log(level, msg)
-    @logger.send(level, msg) if @logger
-  end
-end
-
-###
-# Load handlers, finalize model.
-#
-Dir.open(File.join(Dir.pwd, 'handlers')).each do |p|
-  next if File.extname(p) != '.rb'
-  load File.join(Dir.pwd, 'handlers', p)
-end
-
-DataMapper.finalize
+%w{ digest find logger pp optparse rubygems filemagic dm-core progressbar ./stin.rb }.each{|g| require g}
 
 ###
 # Command-line script starts here.
@@ -123,6 +49,14 @@ log.formatter = proc{|s,d,p,m| "#{d.strftime('%H:%M:%S')} (#{s.ljust(5)}) #{m}\n
 log.level = options[:loglevel]
 STIN.logger = log
 
+if options[:handlers]
+  Dir.open(File.join(Dir.pwd, 'handlers')).each do |p|
+    next if File.extname(p) != '.rb'
+    load File.join(Dir.pwd, 'handlers', p)
+  end
+end
+
+DataMapper.finalize
 DataMapper.setup(:default, 'sqlite://' + options[:database])
 unless File.exists? options[:database]
   log.info 'Setting up fresh database...'

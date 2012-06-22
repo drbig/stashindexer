@@ -1,11 +1,9 @@
 #!/usr/bin/ruby1.9.1
 #
-# Stash Indexer, Archive handler
+# Stash Indexer - Archives handler
+# by dRbiG
 #
 
-###
-# Metadata model.
-#
 module STIN
   class Archive
     include DataMapper::Resource
@@ -14,68 +12,28 @@ module STIN
     property :file, Integer, :required => true
     property :info, Text
   end
-end
 
-STIN.add_handler(/.*\.(tar\.gz|tgz)/, 'STIN::Archive') do |p,e|
-  begin
+  add_handler(/.*\.(tar\.gz|tgz)/, 'STIN::Archive') do |p,e|
     info = `tar --totals -tzf "#{p}" 2>&1`
-  rescue Error => e
-    STIN.log :error, "Archive processor error at file #{p}!"
-    STIN.log :error, 'Archive details not added.'
-    STIN.log :debug, e.backtrace.join("\n")
-    STIN.log :debug, e.to_s
-    nil
-  else
-    entry = STIN::Archive.new(:file => e.id, :info => info)
+    entry = Archive.new(:file => e.id, :info => info)
     entry.save
-    'STIN::Archive'
   end
-end
 
-STIN.add_handler(/.*\.(tar\.(bz|bzip2)|tb(z|z2))/, 'STIN::Archive') do |p,e|
-  begin
+  add_handler(/.*\.(tar\.(bz|bzip2)|tb(z|z2))/, 'STIN::Archive') do |p,e|
     info = `tar --totals -tjf "#{p}" 2>&1`
-  rescue Error => e
-    STIN.log :error, "Archive processor error at file #{p}!"
-    STIN.log :error, 'Archive details not added.'
-    STIN.log :debug, e.backtrace.join("\n")
-    STIN.log :debug, e.to_s
-    nil
-  else
-    entry = STIN::Archive.new(:file => e.id, :info => info)
+    entry = Archive.new(:file => e.id, :info => info)
     entry.save
-    'STIN::Archive'
   end
-end
 
-STIN.add_handler(/.*\.zip/, 'STIN::Archive') do |p,e|
-  begin
+  add_handler(/.*\.zip/, 'STIN::Archive') do |p,e|
     info = `unzip -l "#{p}" 2>&1`
-  rescue Error => e
-    STIN.log :error, "Archive processor error at file #{p}!"
-    STIN.log :error, 'Archive details not added.'
-    STIN.log :debug, e.backtrace.join("\n")
-    STIN.log :debug, e.to_s
-    nil
-  else
-    entry = STIN::Archive.new(:file => e.id, :info => info)
+    entry = Archive.new(:file => e.id, :info => info)
     entry.save
-    'STIN::Archive'
   end
-end
 
-STIN.add_handler(/.*\.rar/, 'STIN::Archive') do |p,e|
-  begin
+  add_handler(/.*\.rar/, 'STIN::Archive') do |p,e|
     info = `unrar l "#{p}" 2>&1`
-  rescue Error => e
-    STIN.log :error, "Archive processor error at file #{p}!"
-    STIN.log :error, 'Archive details not added.'
-    STIN.log :debug, e.backtrace.join("\n")
-    STIN.log :debug, e.to_s
-    nil
-  else
-    entry = STIN::Archive.new(:file => e.id, :info => info)
+    entry = Archive.new(:file => e.id, :info => info)
     entry.save
-    'STIN::Archive'
   end
 end
