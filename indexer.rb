@@ -43,17 +43,16 @@ DataMapper.finalize
 # Command-line script starts here.
 #
 options = { :loglevel => 1, :database => File.join(Dir.pwd, 'data.bin'), \
-            :handlers => true, :root => false, :digest => true }
+            :handlers => true, :root => false, :digest => true, :tags => false }
 OptionParser.new do |o|
   o.banner = 'Usage: indexer.rb [options] tag1 dir1 tag2 dir2...'
 
   o.separator("\nAvailable options:")
   o.on('-v', '--verbose', 'Be more verbose.'){|a| options[:loglevel] = 0}
-  o.on('-i', '--index PATH', 'Path to the SQLite database you want to use.') do |a|
-    options[:database] = a
-  end
+  o.on('-i', '--index PATH', 'Path to the SQLite database you want to use.'){|a| options[:database] = a}
   o.on('-d', '--no-digest', 'Turn off MD5 digests (has consequences!).'){options[:digest] = false}
   o.on('-s', '--no-handlers', 'Do not use filetype-specific handlers.'){options[:handlers] = false}
+  o.on('-t', '--tag name,...', Array, 'Use additional tags for all paths.'){|a| options[:tags] = a}
   o.on('-r', '--root PATH', 'Path to treat as dirs root.') do |a|
     unless File.exists? a and File.directory? a
       STDERR.puts "No such directory #{a}!"
@@ -89,6 +88,17 @@ end
 
 fm = FileMagic.new(:mime_type)
 
+tags = Array.new
+if options[:tags]
+  options[:tags].each do |n|
+    unless t = Tag.first(:name => n)
+      t = Tag.new(:name => n)
+      t.save
+    end
+    tags.push(t)
+  end
+end
+
 log.warn 'Running without MD5 digests!' unless options[:digest]
 Hash[*ARGV].each do |tag,path|
   unless File.exists? path
@@ -107,6 +117,7 @@ Hash[*ARGV].each do |tag,path|
     t = Tag.new(:name => tag) 
     t.save
   end
+  tags.push(t)
   log.info "Walking #{path}..."
   Find.find(path) do |p|
     next unless File.file? p
@@ -141,6 +152,9 @@ Hash[*ARGV].each do |tag,path|
     e = Entry.new(:name => name, :path => path, :digest => digest, :mime => mime, \
                   :size => stat.size, :mtime => stat.mtime, :ctime => stat.ctime)
     e.save
-    EntryTag.new(:entry => e, :tag => t).save
+    tags.each do |t|
+      EntryTag.new(:entry => e, :tag => t).save
+    end
   end
+  tags.pop
 end
