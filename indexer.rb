@@ -6,7 +6,7 @@
 
 VERSION = '0.0.1'
 
-%w{ digest find logger pp optparse rubygems dm-core }.each{|g| require g}
+%w{ digest find logger pp optparse rubygems filemagic dm-core }.each{|g| require g}
 
 options = { :loglevel => 1, :database => 'data.bin', :handlers => true, :root => false }
 OptionParser.new do |o|
@@ -44,6 +44,8 @@ log = Logger.new(STDOUT)
 log.formatter = proc{|s,d,p,m| "#{d.strftime('%H:%M:%S')} (#{s.ljust(5)}) #{m}\n"}
 log.level = options[:loglevel]
 
+fm = FileMagic.new(:mime)
+
 Hash[*ARGV].each do |tag,path|
   unless File.exists? path
     log.error "No such path #{path}!"
@@ -60,8 +62,11 @@ Hash[*ARGV].each do |tag,path|
   log.info "Walking #{path}..."
   Find.find(path) do |p|
     next unless File.file? p
+    stat = File.stat(p)
+    mime = fm.file(p)
     path, name = File.split(p)
     path = '/' + (path.slice(root.length, path.length) || '')
     puts "#{path.ljust(32)} #{name}"
+    puts "#{stat.size} #{stat.mtime} #{stat.ctime} #{mime}"
   end
 end
