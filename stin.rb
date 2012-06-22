@@ -15,6 +15,7 @@ module STIN
     property :name, String, :required => true
     property :path, String, :required => true
     property :size, Integer, :required => true
+    property :stamp, DateTime, :default => Proc.new{|r,p| DateTime.now}
     property :mime, String
     property :digest, String
     property :mtime, DateTime
