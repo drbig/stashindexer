@@ -10,31 +10,32 @@ VERSION = '0.0.1'
 
 ###
 # Basic database model.
-# All main models are to be prefixed with 'St'.
-# 
-class Entry
-  include DataMapper::Resource
+#
+module STIN
+  class File
+    include DataMapper::Resource
 
-  property :id, Serial
-  property :name, String, :required => true
-  property :path, String, :required => true
-  property :size, Integer, :required => true
-  property :mime, String
-  property :digest, String
-  property :mtime, DateTime
-  property :ctime, DateTime
+    property :id, Serial
+    property :name, String, :required => true
+    property :path, String, :required => true
+    property :size, Integer, :required => true
+    property :mime, String
+    property :digest, String
+    property :mtime, DateTime
+    property :ctime, DateTime
 
-  has n, :tags, :through => Resource
-end
+    has n, :tags, :through => Resource
+  end
 
-class Tag
-  include DataMapper::Resource
+  class Tag
+    include DataMapper::Resource
 
-  property :id, Serial
-  property :name, String, :required => true
-  property :ctime, DateTime, :default => Proc.new{|r,p| DateTime.now}
+    property :id, Serial
+    property :name, String, :required => true
+    property :ctime, DateTime, :default => Proc.new{|r,p| DateTime.now}
 
-  has n, :entries, :through => Resource
+    has n, :files, :through => Resource
+  end
 end
 
 DataMapper.finalize
@@ -91,8 +92,8 @@ fm = FileMagic.new(:mime_type)
 tags = Array.new
 if options[:tags]
   options[:tags].each do |n|
-    unless t = Tag.first(:name => n)
-      t = Tag.new(:name => n)
+    unless t = STIN::Tag.first(:name => n)
+      t = STIN::Tag.new(:name => n)
       t.save
     end
     tags.push(t)
@@ -113,8 +114,8 @@ Hash[*ARGV].each do |tag,path|
     log.warn "Skipping #{tag} #{path}."
     next
   end
-  unless t = Tag.first(:name => tag)
-    t = Tag.new(:name => tag) 
+  unless t = STIN::Tag.first(:name => tag)
+    t = STIN::Tag.new(:name => tag) 
     t.save
   end
   tags.push(t)
@@ -133,9 +134,9 @@ Hash[*ARGV].each do |tag,path|
       next
     end
     if options[:digest]
-      es = Entry.all(:digest => digest)
+      es = STIN::File.all(:digest => digest)
     else
-      es = Entry.all(:name => name)
+      es = STIN::File.all(:name => name)
     end
     if es and es.length > 0
       log.warn "Duplicate file #{name}"
@@ -149,11 +150,11 @@ Hash[*ARGV].each do |tag,path|
       end
       next if skip
     end
-    e = Entry.new(:name => name, :path => path, :digest => digest, :mime => mime, \
+    e = STIN::File.new(:name => name, :path => path, :digest => digest, :mime => mime, \
                   :size => stat.size, :mtime => stat.mtime, :ctime => stat.ctime)
     e.save
     tags.each do |t|
-      EntryTag.new(:entry => e, :tag => t).save
+      STIN::FileTag.new(:file => e, :tag => t).save
     end
   end
   tags.pop
