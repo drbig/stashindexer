@@ -85,7 +85,7 @@ unless File.exists? options[:database]
   DataMapper.auto_migrate!
 end
 
-fm = FileMagic.new(:mime)
+fm = FileMagic.new(:mime_type)
 
 Hash[*ARGV].each do |tag,path|
   unless File.exists? path
@@ -107,10 +107,16 @@ Hash[*ARGV].each do |tag,path|
   log.info "Walking #{path}..."
   Find.find(path) do |p|
     next unless File.file? p
-    digest = Digest::MD5.file(p).hexdigest
-    stat = File.stat(p)
-    mime = fm.file(p).split(';').first
     path, name = File.split(p)
+    begin
+      digest = Digest::MD5.file(p).hexdigest
+      stat = File.stat(p)
+      mime = fm.file(p)
+    rescue IOError => e
+      log.error "IOError at file #{name}!"
+      log.error 'Skipping.'
+      next
+    end
     path = '/' + (path.slice(root.length, path.length) || '')
     if e = Entry.first(:digest => digest)
       log.warn "Duplicate file #{name} (digest #{digest})"
