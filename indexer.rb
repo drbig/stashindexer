@@ -16,11 +16,11 @@ class Entry
   include DataMapper::Resource
 
   property :id, Serial
-  property :digest, String, :required => true 
   property :name, String, :required => true
   property :path, String, :required => true
   property :size, Integer, :required => true
   property :mime, String
+  property :digest, String
   property :mtime, DateTime
   property :ctime, DateTime
 
@@ -42,16 +42,18 @@ DataMapper.finalize
 ###
 # Command-line script starts here.
 #
-options = { :loglevel => 1, :database => File.join(Dir.pwd, 'data.bin'), :handlers => true, :root => false }
+options = { :loglevel => 1, :database => File.join(Dir.pwd, 'data.bin'), \
+            :handlers => true, :root => false, :digest => true }
 OptionParser.new do |o|
   o.banner = 'Usage: indexer.rb [options] tag1 dir1 tag2 dir2...'
 
   o.separator("\nAvailable options:")
   o.on('-v', '--verbose', 'Be more verbose.'){|a| options[:loglevel] = 0}
-  o.on('-d', '--db PATH', 'Path to the SQLite database you want to use.') do |a|
+  o.on('-i', '--index PATH', 'Path to the SQLite database you want to use.') do |a|
     options[:database] = a
   end
-  o.on('-n', '--no-handlers', 'Do not use file-specific handlers.'){options[:handlers] = false}
+  o.on('-d', '--no-digest', 'Turn off MD5 digests (has consequences!).'){options[:digest] = false}
+  o.on('-s', '--no-handlers', 'Do not use filetype-specific handlers.'){options[:handlers] = false}
   o.on('-r', '--root PATH', 'Path to treat as dirs root.') do |a|
     unless File.exists? a and File.directory? a
       STDERR.puts "No such directory #{a}!"
@@ -87,6 +89,7 @@ end
 
 fm = FileMagic.new(:mime_type)
 
+log.warn 'Running without MD5 digests!' unless options[:digest]
 Hash[*ARGV].each do |tag,path|
   unless File.exists? path
     log.warn "No such path #{path}!"
@@ -108,8 +111,9 @@ Hash[*ARGV].each do |tag,path|
   Find.find(path) do |p|
     next unless File.file? p
     path, name = File.split(p)
+    path = '/' + (path.slice(root.length, path.length) || '')
     begin
-      digest = Digest::MD5.file(p).hexdigest
+      digest = options[:digest] ? Digest::MD5.file(p).hexdigest : nil
       stat = File.stat(p)
       mime = fm.file(p)
     rescue IOError => e
@@ -117,13 +121,22 @@ Hash[*ARGV].each do |tag,path|
       log.error 'Skipping.'
       next
     end
-    path = '/' + (path.slice(root.length, path.length) || '')
-    if e = Entry.first(:digest => digest)
-      log.warn "Duplicate file #{name} (digest #{digest})"
-      if e.name == name and e.path == path and e.tags.member?(t)
-        log.warn 'Name, path and tag match, skipping.'
-        next
+    if options[:digest]
+      es = Entry.all(:digest => digest)
+    else
+      es = Entry.all(:name => name)
+    end
+    if es and es.length > 0
+      log.warn "Duplicate file #{name}"
+      skip = false
+      es.each do |e|
+        if e.name == name and e.path == path and e.tags.member?(t)
+          log.warn 'Name, path and tag match, skipping.'
+          skip = true
+          break
+        end
       end
+      next if skip
     end
     e = Entry.new(:name => name, :path => path, :digest => digest, :mime => mime, \
                   :size => stat.size, :mtime => stat.mtime, :ctime => stat.ctime)
