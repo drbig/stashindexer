@@ -18,7 +18,9 @@ OptionParser.new do |o|
 
   o.separator("\nAvailable options:")
   o.on('-v', '--verbose', 'Be more verbose.'){|a| options[:loglevel] = 0}
-  o.on('-i', '--index PATH', 'Path to the SQLite database you want to use.'){|a| options[:database] = a}
+  o.on('-i', '--index PATH', 'Path to the SQLite database you want to use.') do |a| 
+    options[:database] = File.absolute_path(a)
+  end
   o.on('-d', '--no-digest', 'Turn off MD5 digests (has consequences!).'){options[:digest] = false}
   o.on('-s', '--no-handlers', 'Do not use filetype-specific handlers.'){options[:handlers] = false}
   o.on('-t', '--tag name,...', Array, 'Use additional tags for all paths.'){|a| options[:tags] = a}
