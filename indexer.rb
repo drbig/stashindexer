@@ -6,7 +6,7 @@
 
 VERSION = '0.0.1'
 
-%w{ digest find logger pp optparse rubygems filemagic dm-core }.each{|g| require g}
+%w{ digest find logger pp optparse rubygems filemagic dm-core progressbar }.each{|g| require g}
 
 ###
 # Basic database model.
@@ -163,8 +163,14 @@ Hash[*ARGV].each do |tag,path|
   end
   tags.push(t)
   log.info "Walking #{path}..."
+  filetree = Array.new
   Find.find(path) do |p|
     next unless File.file? p
+    filetree << p
+  end
+  pbar = ProgressBar.new('Processing', filetree.length)
+  filetree.each do |p|
+    pbar.inc
     path, name = File.split(p)
     path = '/' + (path.slice(root.length, path.length) || '')
     begin
@@ -201,5 +207,6 @@ Hash[*ARGV].each do |tag,path|
     end
     STIN.process(p, e) if options[:handlers]
   end
+  pbar.finish
   tags.pop
 end
