@@ -18,7 +18,7 @@ end
 
 STIN.add_handler(/.*\.(tar\.gz|tgz)/, 'STIN::Archive') do |p,e|
   begin
-    info = `tar --totals -tzf "#{p}"`
+    info = `tar --totals -tzf "#{p}" 2>&1`
   rescue Error => e
     STIN.log :error, "Archive processor error at file #{p}!"
     STIN.log :error, 'Archive details not added.'
@@ -34,7 +34,7 @@ end
 
 STIN.add_handler(/.*\.(tar\.(bz|bzip2)|tb(z|z2))/, 'STIN::Archive') do |p,e|
   begin
-    info = `tar --totals -tjf "#{p}"`
+    info = `tar --totals -tjf "#{p}" 2>&1`
   rescue Error => e
     STIN.log :error, "Archive processor error at file #{p}!"
     STIN.log :error, 'Archive details not added.'
@@ -50,7 +50,7 @@ end
 
 STIN.add_handler(/.*\.zip/, 'STIN::Archive') do |p,e|
   begin
-    info = `unzip -l "#{p}"`
+    info = `unzip -l "#{p}" 2>&1`
   rescue Error => e
     STIN.log :error, "Archive processor error at file #{p}!"
     STIN.log :error, 'Archive details not added.'
@@ -66,7 +66,7 @@ end
 
 STIN.add_handler(/.*\.rar/, 'STIN::Archive') do |p,e|
   begin
-    info = `unrar l "#{p}"`
+    info = `unrar l "#{p}" 2>&1`
   rescue Error => e
     STIN.log :error, "Archive processor error at file #{p}!"
     STIN.log :error, 'Archive details not added.'

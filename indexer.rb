@@ -23,6 +23,7 @@ module STIN
     property :digest, String
     property :mtime, DateTime
     property :ctime, DateTime
+    property :additional, String
 
     has n, :tags, :through => Resource
   end
@@ -36,6 +37,47 @@ module STIN
 
     has n, :files, :through => Resource
   end
+end
+
+###
+# Handlers dispatcher.
+#
+module STIN
+  @table = Array.new
+  @map = Hash.new
+  @logger = false
+
+  def self.logger=(obj); @logger = obj; end
+
+  def self.add_handler(regexp, dataclass, &blk)
+    @table.push([regexp, blk])
+    @map[dataclass.to_s] = dataclass
+  end
+
+  def self.process(path, entry)
+    additional = Array.new
+    @table.each do |h|
+      regexp, handler = h
+      additional.push(handler.call(path, entry)) if (entry.mime.match(regexp) or entry.name.match(regexp))
+    end
+    additional = additional.compact.uniq
+    if additional.length > 0
+      entry.additional = additional.join(',')
+      entry.save
+    end
+  end
+
+  def self.log(level, msg)
+    @logger.send(level, msg) if @logger
+  end
+end
+
+###
+# Load handlers, finalize model.
+#
+Dir.open(File.join(Dir.pwd, 'handlers')).each do |p|
+  next if File.extname(p) != '.rb'
+  load File.join(Dir.pwd, 'handlers', p)
 end
 
 DataMapper.finalize
@@ -79,6 +121,7 @@ end
 log = Logger.new(STDOUT)
 log.formatter = proc{|s,d,p,m| "#{d.strftime('%H:%M:%S')} (#{s.ljust(5)}) #{m}\n"}
 log.level = options[:loglevel]
+STIN.logger = log
 
 DataMapper.setup(:default, 'sqlite://' + options[:database])
 unless File.exists? options[:database]
@@ -150,12 +193,13 @@ Hash[*ARGV].each do |tag,path|
       end
       next if skip
     end
-    e = STIN::File.new(:name => name, :path => path, :digest => digest, :mime => mime, \
-                  :size => stat.size, :mtime => stat.mtime, :ctime => stat.ctime)
+    e = STIN::File.new(:name => name, :path => path, :size => stat.size, :mime => mime, \
+                       :digest => digest, :mtime => stat.mtime, :ctime => stat.ctime)
     e.save
     tags.each do |t|
       STIN::FileTag.new(:file => e, :tag => t).save
     end
+    STIN.process(p, e) if options[:handlers]
   end
   tags.pop
 end
