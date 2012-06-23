@@ -4,7 +4,7 @@
 # by dRbiG
 #
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 
 %w{ digest find logger optparse rubygems filemagic dm-core progressbar ./stin.rb }.each{|g| require g}
 
@@ -28,7 +28,7 @@ OptionParser.new do |o|
   o.on('-t', '--tag name,...', Array, 'Use additional tags for all paths.'){|a| options[:tags] = a}
   o.on('-r', '--root PATH', 'Path to treat as dirs root.') do |a|
     unless File.exists? a and File.directory? a
-      STDERR.puts "No such directory #{a}!"
+      STDERR.puts "No such directory '#{a}'!"
       exit(5)
     end
     a += '/' unless a.end_with? '/'
@@ -87,15 +87,15 @@ log.warn 'Running without MD5 digests!' unless options[:digest]
 Hash[*ARGV].each do |tag,path|
   log.info "Running loop for tag #{tag}."
   unless File.exists? path
-    log.warn "No such path #{path}!"
-    log.warn "Skipping #{tag} #{path}."
+    log.warn "No such path '#{path}'!"
+    log.warn "Skipping #{tag} '#{path}'."
     next
   end
   path += '/' unless path.end_with? '/'
   root = options[:root] || path
   unless path.start_with? root
-    log.warn "Path #{path} is not located at root '#{root}'!"
-    log.warn "Skipping #{tag} #{path}."
+    log.warn "Path '#{path}' is not located at root '#{root}'!"
+    log.warn "Skipping #{tag} '#{path}'."
     next
   end
   unless t = STIN::Tag.first(:name => tag)
@@ -103,11 +103,11 @@ Hash[*ARGV].each do |tag,path|
     t.save
   end
   tags.push(t)
-  log.info "Walking #{path}..."
+  log.info "Walking '#{path}'..."
   filetree = Array.new
   Find.find(path) do |p|
     next unless File.file? p
-    filetree << p
+    filetree.push(p)
   end
   pbar = ProgressBar.new('Processing', filetree.length)
   filetree.each do |p|
