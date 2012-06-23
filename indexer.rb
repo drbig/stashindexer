@@ -81,6 +81,7 @@ end
 
 log.warn 'Running without MD5 digests!' unless options[:digest]
 Hash[*ARGV].each do |tag,path|
+  log.info "Running loop for tag #{tag}."
   unless File.exists? path
     log.warn "No such path #{path}!"
     log.warn "Skipping #{tag} #{path}."
