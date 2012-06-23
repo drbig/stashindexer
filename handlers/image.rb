@@ -18,9 +18,9 @@ module STIN
   end
 
   add_handler(/image\/.*/, 'STIN::Image') do |p,e|
+    next false if e.mime.match(/.*djvu.*/) # early return, due to imagemagick segfaulting on djvu
     img = Magick::ImageList.new(p).first
-    entry = Image.new(:file => e.id, :width => img.columns, :height => img.rows, \
-                      :info => img.properties.collect{|k,v| "#{k} = #{v}"}.join("\n"))
-    entry.save
+    Image.new(:file => e.id, :width => img.columns, :height => img.rows, \
+              :info => img.properties.collect{|k,v| "#{k} = #{v}"}.join("\n")).save
   end
 end

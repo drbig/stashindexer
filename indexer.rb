@@ -4,15 +4,16 @@
 # by dRbiG
 #
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
-%w{ digest find logger pp optparse rubygems filemagic dm-core progressbar ./stin.rb }.each{|g| require g}
+%w{ digest find logger optparse rubygems filemagic dm-core progressbar ./stin.rb }.each{|g| require g}
 
 ###
 # Command-line script starts here.
 #
 options = { :loglevel => 1, :database => File.join(Dir.pwd, 'data.bin'), \
-            :handlers => true, :root => false, :digest => true, :tags => false }
+            :handlers => true, :root => false, :digest => true, :tags => false, \
+            :timeout => 10 }
 OptionParser.new do |o|
   o.banner = 'Usage: indexer.rb [options] tag1 dir1 tag2 dir2...'
 
@@ -23,6 +24,7 @@ OptionParser.new do |o|
   end
   o.on('-d', '--no-digest', 'Turn off MD5 digests (has consequences!).'){options[:digest] = false}
   o.on('-s', '--no-handlers', 'Do not use filetype-specific handlers.'){options[:handlers] = false}
+  o.on('-w', '--wait SEC', Integer, 'Maximum wait time for handler to finish.'){|a| options[:timeout] = a}
   o.on('-t', '--tag name,...', Array, 'Use additional tags for all paths.'){|a| options[:tags] = a}
   o.on('-r', '--root PATH', 'Path to treat as dirs root.') do |a|
     unless File.exists? a and File.directory? a
@@ -49,6 +51,8 @@ end
 log = Logger.new(STDOUT)
 log.formatter = proc{|s,d,p,m| "#{d.strftime('%H:%M:%S')} (#{s.ljust(5)}) #{m}\n"}
 log.level = options[:loglevel]
+
+STIN.timeout = options[:timeout]
 STIN.logger = log
 
 if options[:handlers]
@@ -90,7 +94,7 @@ Hash[*ARGV].each do |tag,path|
   path += '/' unless path.end_with? '/'
   root = options[:root] || path
   unless path.start_with? root
-    log.warn "Path #{path} is not located at root #{root}!"
+    log.warn "Path #{path} is not located at root '#{root}'!"
     log.warn "Skipping #{tag} #{path}."
     next
   end
@@ -115,7 +119,7 @@ Hash[*ARGV].each do |tag,path|
       stat = File.stat(p)
       mime = fm.file(p)
     rescue IOError => e
-      log.error "IOError at file #{name}!"
+      log.error "IOError at file '#{name}'!"
       log.error 'Skipping.'
       next
     end

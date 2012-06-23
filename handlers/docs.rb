@@ -28,9 +28,8 @@ module STIN
     if m = info.match(/^Pages:\s+(.*)$/)
       length = m[1].to_i
     end
-    entry = Document.new(:file => e.id, :length => length, :title => title, \
-                               :author => author, :info => info)
-    entry.save
+    Document.new(:file => e.id, :length => length, \
+                 :title => title, :author => author, :info => info).save
   end
 end
 

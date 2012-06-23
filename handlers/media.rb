@@ -32,7 +32,7 @@ module STIN
   add_handler(/video\/.*/, 'STIN::Video') do |p,e|
     info = `ffprobe "#{p}" 2>&1`.match(/^Input .*/m)[0]
     width = height = length = title = nil
-    if m = info.match(/(\d+)x(\d+) /)
+    if m = info.match(/(\d+)x(\d+)/)
       width = m[1]
       height = m[2]
     end
@@ -43,9 +43,8 @@ module STIN
       dur = m[1].split(':').collect(&:to_i)
       length = dur[0] * 3600 + dur[1] * 60 + dur[2]
     end
-    entry = Video.new(:file => e.id, :width => width, :height => height, :length => length, \
-                            :title => title, :info => info)
-    entry.save
+    Video.new(:file => e.id, :width => width, :height => height, \
+              :length => length, :title => title, :info => info).save
   end
 
   add_handler(/audio\/.*/, 'STIN::Audio') do |p,e|
@@ -64,8 +63,7 @@ module STIN
       dur = m[1].split(':').collect(&:to_i)
       length = dur[0] * 3600 + dur[1] * 60 + dur[2]
     end
-    entry = Audio.new(:file => e.id, :length => length, :title => title, :artist => artist, \
-                            :album => album, :info => info)
-    entry.save
+    Audio.new(:file => e.id, :length => length, :title => title, \
+              :artist => artist, :album => album, :info => info).save
   end
 end

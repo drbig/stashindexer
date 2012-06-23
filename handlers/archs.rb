@@ -15,25 +15,21 @@ module STIN
 
   add_handler(/.*\.(tar\.gz|tgz)/, 'STIN::Archive') do |p,e|
     info = `tar --totals -tzf "#{p}" 2>&1`
-    entry = Archive.new(:file => e.id, :info => info)
-    entry.save
+    Archive.new(:file => e.id, :info => info).save
   end
 
   add_handler(/.*\.(tar\.(bz|bzip2)|tb(z|z2))/, 'STIN::Archive') do |p,e|
     info = `tar --totals -tjf "#{p}" 2>&1`
-    entry = Archive.new(:file => e.id, :info => info)
-    entry.save
+    Archive.new(:file => e.id, :info => info).save
   end
 
   add_handler(/.*\.zip/, 'STIN::Archive') do |p,e|
     info = `unzip -l "#{p}" 2>&1`
-    entry = Archive.new(:file => e.id, :info => info)
-    entry.save
+    Archive.new(:file => e.id, :info => info).save
   end
 
   add_handler(/.*\.rar/, 'STIN::Archive') do |p,e|
     info = `unrar l "#{p}" 2>&1`
-    entry = Archive.new(:file => e.id, :info => info)
-    entry.save
+    Archive.new(:file => e.id, :info => info).save
   end
 end

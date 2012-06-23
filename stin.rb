@@ -4,6 +4,8 @@
 # by dRbiG
 #
 
+%w{ timeout rubygems dm-core }.each{|g| require g}
+
 module STIN
   ###
   # Basic index model.
@@ -41,8 +43,10 @@ module STIN
   @table = Array.new
   @map = Hash.new
   @logger = false
+  @timeout = 10
 
   def self.logger=(obj); @logger = obj; end
+  def self.timeout=(val); @timeout = val; end
 
   def self.log(level, msg)
     @logger.send(level, msg) if @logger
@@ -58,15 +62,25 @@ module STIN
     @table.each do |h|
       regexp, dataclass, handler = h
       if entry.mime.match(regexp) or entry.name.match(regexp)
+        ret = nil
         begin
-          handler.call(path, entry)
-        rescue Exception => e
-          log :error, "#{dataclass.to_s} processor error at file #{path}!"
+          Timeout::timeout(@timeout){ret = handler.call(path, entry)}
+        rescue Timeout::Error
+          log :error, "#{dataclass.to_s} processor timeouted at file '#{path}'!"
           log :error, 'Additional details not saved.'
+          log :debug, "Handler regexp: #{regexp.to_s}"
+        rescue Interrupt
+          log :error, "#{dataclass.to_s} processor interrupted at file '#{path}'!"
+          log :error, 'Additional details not saved.'
+          log :debug, "Handler regexp: #{regexp.to_s}"
+        rescue Exception => e
+          log :error, "#{dataclass.to_s} processor error at file '#{path}'!"
+          log :error, 'Additional details not saved.'
+          log :debug, "Handler regexp: #{regexp.to_s}"
           log :debug, e.backtrace.join("\n")
           log :debug, e.to_s
         else
-          additional.push(dataclass.to_s)
+          additional.push(dataclass.to_s) if ret
         end
       end
     end
